@@ -1,5 +1,6 @@
 const { MerkleTree } = require('merkletreejs');
 const SHA256 = require('crypto-js/sha256');
+const cliProgress = require('cli-progress');
 
 /*
 The IPFS Verifier that is used to check the status of a batch of files on the IPFS network.
@@ -46,15 +47,17 @@ export type Options = {
                        function. This can be used to store proofs in a database of your choice
         stampCallback: A callback that takes a cid and timestamp and returns the stamp of the file. This can be used to
                        generate a custom timestamp for each leaf.
-* @returns TimestampedMerkleRoot The merkle root of the network. It is the caller's responsibility to provide a
+ * @returns TimestampedMerkleRoot The merkle root of the network. It is the caller's responsibility to provide a
     `proofCallback` should they want to store more information about the proofs.
-*/
-export const fileProofMerkleRoot = async  (
+ */
+
+exports.fileProofMerkleRoot = async (
     timestamp: String,
     ipfsNode: any,
     CIDs: String[],
     options: Options = {}
-) => {
+): Promise<TimestampedMerkleRoot> => {
+    console.log("Generating Merkle Root for CIDs: ", CIDs)
     // Initialize our return Object
     let returnObject: TimestampedMerkleRoot = {
         root: '',
@@ -65,6 +68,9 @@ export const fileProofMerkleRoot = async  (
     // Create a new merkle tree
     let leaves = []
     // For each CID, generate a proof of inclusion
+    console.log("Generating proofs...")
+    const proofProgressBar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
+    proofProgressBar.start(CIDs.length, 0);
     for (let i = 0; i < CIDs.length; i++) {
         // Get the proof of inclusion, returns a boolean if the file is found
         let proof = await fileProof(ipfsNode, CIDs[i])
@@ -75,31 +81,42 @@ export const fileProofMerkleRoot = async  (
                 cid: CIDs[i],
                 stamp: returnObject.stampFunction(CIDs[i], timestamp)
             }
-            leaves.push(leaf)
+            // Append a hash of the leaf to the list of leaves
+            leaves.push(SHA256(leaf))
         }
+        proofProgressBar.update(i + 1)
     }
+    proofProgressBar.stop();
 
+    console.log("Generated Leaves: ", leaves)
+
+    console.log("Generating Merkle Tree...")
     // Create a new merkle tree based on our leaves
-    const tree = new MerkleTree(leaves, SHA256, { hashLeaves: true })
+    const tree = new MerkleTree(leaves, SHA256)
     // And get a root hash
     returnObject.root = tree.getRoot().toString('hex')
 
-    console.debug('[IPFS Verifier] Generated merkle root: ', returnObject.root)
+    // console.debug('[IPFS Verifier] Generated merkle root: ', returnObject.root)
 
     // If we have a callback for storing our proofs, call it on each leaf
     if (options.proofCallback) {
+        console.log("Saving proofs...")
+        proofProgressBar.start(CIDs.length, 0);
         // For each leaf,
         for (let i = 0; i < leaves.length; i++) {
 
             // Hash it and get its proof
             // https://github.com/miguelmota/merkletreejs/blob/master/docs/classes/_src_merkletree_.merkletree.md#getproof
             let proof = tree.getProof(SHA256(leaves[i]))
+            console.log(proof)
 
-            console.debug('[IPFS Verifier] Proof of inclusion for leaf ', leaves[i], ": ", proof)
+            // console.debug('[IPFS Verifier] Proof of inclusion for leaf ', leaves[i], ": ", proof)
 
             // Call the callback with the proof object
             options.proofCallback(leaves[i].cid, proof)
+            proofProgressBar.update(i + 1)
         }
+        proofProgressBar.stop();
     }
     return returnObject
 }
@@ -111,18 +128,17 @@ export const fileProofMerkleRoot = async  (
  * @param merkleRoot: The Timestamped Merkle Root of the network
  * @returns boolean: True if the file is available on the network, false otherwise
  */
-export const fileStatus = async (CID: String, proof: any, merkleRoot: TimestampedMerkleRoot) => {
+exports.fileStatus = async (CID: String, proof: any, merkleRoot: TimestampedMerkleRoot) => {
     // Calculate the leaf of the file based on the CID and the timestamp
     let leaf: Leaf = {
         cid: CID,
         stamp: merkleRoot.stampFunction(CID, merkleRoot.timestamp)
     }
 
-    // TODO: Figure out if this works without having to recreate the merkle tree
-    let tree = new MerkleTree([], SHA256, { hashLeaves: true })
+    console.log("Testing inclusions of Leaf: ", leaf)
 
     // Verify the proof of inclusion using the Merkle Tree
-    return tree.verify(proof, leaf, merkleRoot.root)
+    return MerkleTree.verify(proof, SHA256(leaf), merkleRoot.root)
 }
 
 /* Helper Functions and Defaults */
@@ -157,9 +173,14 @@ const fileProof = async (
     // let leaf = SHA256(challengeBlock.data).toString()
     // let proof = tree.getProof(leaf)
     // return tree.verify(proof, leaf, tree.root)
-
-    const fileStatus = await ipfsNode.files.stat(CID)
-    return fileStatus.cid.toString() === CID
+    let ret = false
+    for await (const chunk of ipfsNode.cat(CID)) {
+        ret = true
+        break
+    }
+    // const fileStatus = await ipfsNode.files.stat("/ipfs/",CID)
+    // return fileStatus.cid.toString() === CID
+    return ret
 }
 
 /**
