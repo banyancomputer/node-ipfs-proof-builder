@@ -41,7 +41,7 @@ exports.fileProofMerkleRoot = (timestamp, ipfsNode, CIDs, options = {}) => __awa
         stampFunction: options.stampFunction || defaultStamp
     };
     // Create a new merkle tree
-    let leaves = [];
+    var leaves = [];
     // For each CID, generate a proof of inclusion
     console.log("Generating proofs...");
     const proofProgressBar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
@@ -49,6 +49,7 @@ exports.fileProofMerkleRoot = (timestamp, ipfsNode, CIDs, options = {}) => __awa
     for (let i = 0; i < CIDs.length; i++) {
         // Get the proof of inclusion, returns a boolean if the file is found
         let proof = yield fileProof(ipfsNode, CIDs[i]);
+        console.log("\nFile Reachable: ", proof, CIDs[i]);
         // If the proof is valid, stamp it and add it to the list of leaves
         if (proof) {
             let leaf = {
@@ -56,17 +57,18 @@ exports.fileProofMerkleRoot = (timestamp, ipfsNode, CIDs, options = {}) => __awa
                 stamp: returnObject.stampFunction(CIDs[i], timestamp)
             };
             // Append a hash of the leaf to the list of leaves
-            leaves.push(SHA256(leaf));
+            leaves.push(leaf);
         }
         proofProgressBar.update(i + 1);
     }
     proofProgressBar.stop();
-    console.log("Generated Leaves: ", leaves);
     console.log("Generating Merkle Tree...");
     // Create a new merkle tree based on our leaves
+    leaves = leaves.map(x => SHA256(x.cid, x.stamp));
     const tree = new MerkleTree(leaves, SHA256);
     // And get a root hash
     returnObject.root = tree.getRoot().toString('hex');
+    console.log(tree.toString());
     // console.debug('[IPFS Verifier] Generated merkle root: ', returnObject.root)
     // If we have a callback for storing our proofs, call it on each leaf
     if (options.proofCallback) {
@@ -76,11 +78,10 @@ exports.fileProofMerkleRoot = (timestamp, ipfsNode, CIDs, options = {}) => __awa
         for (let i = 0; i < leaves.length; i++) {
             // Hash it and get its proof
             // https://github.com/miguelmota/merkletreejs/blob/master/docs/classes/_src_merkletree_.merkletree.md#getproof
-            let proof = tree.getProof(SHA256(leaves[i]));
-            console.log(proof);
+            let proof2 = tree.getProof(leaves[i]);
             // console.debug('[IPFS Verifier] Proof of inclusion for leaf ', leaves[i], ": ", proof)
             // Call the callback with the proof object
-            options.proofCallback(leaves[i].cid, proof);
+            options.proofCallback(CIDs[i], proof2);
             proofProgressBar.update(i + 1);
         }
         proofProgressBar.stop();
@@ -102,7 +103,7 @@ exports.fileStatus = (CID, proof, merkleRoot) => __awaiter(void 0, void 0, void 
     };
     console.log("Testing inclusions of Leaf: ", leaf);
     // Verify the proof of inclusion using the Merkle Tree
-    return MerkleTree.verify(proof, SHA256(leaf), merkleRoot.root);
+    return MerkleTree.verify(proof, SHA256(leaf.cid, leaf.stamp), merkleRoot.root);
 });
 /* Helper Functions and Defaults */
 /**

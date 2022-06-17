@@ -15,6 +15,9 @@ describe("IPFS Verifier Test Suite", function() {
         'QmRA3NWM82ZGynMbYzAgYTSXCVM14Wx1RZ8fKP42G6gjgj',
         // The Ehtereum whitepaper
         'Qmd63gzHfXCsJepsdTLd4cqigFa7SuCAeH6smsVoHovdbE',
+        // Filecoin Whitepapr
+        'QmdhGTx5URGR1EwAPTTBV17QBmX7PDhuHrfFoiVzSjBsu7',
+
 
         // Non-Existent/Non-Pinned Files
         // ...
@@ -31,7 +34,7 @@ describe("IPFS Verifier Test Suite", function() {
     };
 
     // Declare a Timestamp to test with
-    const testTimestamp = Date.now();
+    const testTimestamp =  Date.now();
 
     // Before each test, initialize a new IPFS node and build a new root
     beforeAll(async function() {
@@ -42,7 +45,6 @@ describe("IPFS Verifier Test Suite", function() {
         // Build a new Merkle Root
         console.log("Building Merkle Root...");
         root = await fileProofMerkleRoot(testTimestamp, testIPFSNode, testCIDS, {proofCallback: proofCallback});
-
         console.log("Testing against new Root: " + JSON.stringify(root));
     }, 300000);
 
@@ -55,7 +57,6 @@ describe("IPFS Verifier Test Suite", function() {
         // Test the inclusion of one of our pinned files
         let proof = fileProofDict[testCIDS[0]];
         console.log("Testing inclusion of pinned file: " + testCIDS[0]);
-        console.log("Proof: " + JSON.stringify(proof));
         let result = await fileStatus(testCIDS[0], proof, root);
         expect(result).toBe(true);
     }, 10000);
