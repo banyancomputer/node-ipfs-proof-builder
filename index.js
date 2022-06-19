@@ -19,6 +19,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const { MerkleTree } = require('merkletreejs');
 const SHA256 = require('crypto-js/sha256');
 const cliProgress = require('cli-progress');
+const toBuffer = require('it-to-buffer');
 /**
  * Summary: Generate a stamped merkle root for our network based on a list of CIDS.
  * @param timestamp: The timestamp we should use to stamp our leaves
@@ -48,8 +49,9 @@ exports.fileProofMerkleRoot = (timestamp, ipfsNode, CIDs, options = {}) => __awa
     proofProgressBar.start(CIDs.length, 0);
     for (let i = 0; i < CIDs.length; i++) {
         // Get the proof of inclusion, returns a boolean if the file is found
-        let proof = yield fileProof(ipfsNode, CIDs[i]);
-        console.log("\nFile Reachable: ", proof, CIDs[i]);
+        let timeLimit = 5000;
+        let failureValue = false;
+        let proof = yield fulfillWithTimeLimit(timeLimit, fileProofDownload(ipfsNode, CIDs[i]), failureValue);
         // If the proof is valid, stamp it and add it to the list of leaves
         if (proof) {
             let leaf = {
@@ -59,6 +61,8 @@ exports.fileProofMerkleRoot = (timestamp, ipfsNode, CIDs, options = {}) => __awa
             // Append a hash of the leaf to the list of leaves
             leaves.push(leaf);
         }
+        else
+            console.log("\nFILE FAILURE: ", CIDs[i]);
         proofProgressBar.update(i + 1);
     }
     proofProgressBar.stop();
@@ -78,10 +82,10 @@ exports.fileProofMerkleRoot = (timestamp, ipfsNode, CIDs, options = {}) => __awa
         for (let i = 0; i < leaves.length; i++) {
             // Hash it and get its proof
             // https://github.com/miguelmota/merkletreejs/blob/master/docs/classes/_src_merkletree_.merkletree.md#getproof
-            let proof2 = tree.getProof(leaves[i]);
+            let merkle_proof = tree.getProof(leaves[i]);
             // console.debug('[IPFS Verifier] Proof of inclusion for leaf ', leaves[i], ": ", proof)
             // Call the callback with the proof object
-            options.proofCallback(CIDs[i], proof2);
+            options.proofCallback(CIDs[i], merkle_proof);
             proofProgressBar.update(i + 1);
         }
         proofProgressBar.stop();
@@ -136,6 +140,7 @@ const fileProof = (ipfsNode, CID) => __awaiter(void 0, void 0, void 0, function*
         for (var _b = __asyncValues(ipfsNode.cat(CID)), _c; _c = yield _b.next(), !_c.done;) {
             const chunk = _c.value;
             ret = true;
+            console.log("\nFile Reachable: ", CID);
             break;
         }
     }
@@ -149,6 +154,40 @@ const fileProof = (ipfsNode, CID) => __awaiter(void 0, void 0, void 0, function*
     // const fileStatus = await ipfsNode.files.stat("/ipfs/",CID)
     // return fileStatus.cid.toString() === CID
     return ret;
+});
+/**
+ * Summary: Prove that a file is available on the network.
+ * @param ipfsNode: The IPFS node we want to use to generate the proof.
+ * @param CID: The CID of the file we want to check.
+ * @returns boolean: True if the file is available on the network, false otherwise.
+ */
+const fileProofDownload = (ipfsNode, CID) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log("\nFile: ", CID);
+    const source = (yield toBuffer(ipfsNode.cat(CID)));
+    const hash = (yield ipfsNode.add(source, { onlyHash: true })).cid.toString();
+    let file_stored = (hash == CID);
+    console.log("\nFile Reachable: ", file_stored);
+    return file_stored;
+});
+/**
+ * Summary: Fulfill a promise within a given time limit. If not fulfilled then return failure value
+ * @param timeLimit: The max time to fulfill the promise
+ * @param task: The Promise being limited
+ * @param failureValue: The return value if the time limit is exceeded
+ * @returns any: Failure value if timeout, the return type of the task if succeeds
+ */
+const fulfillWithTimeLimit = (timeLimit, task, failureValue) => __awaiter(void 0, void 0, void 0, function* () {
+    let timeout;
+    const timeoutPromise = new Promise((resolve, reject) => {
+        timeout = setTimeout(() => {
+            resolve(failureValue);
+        }, timeLimit);
+    });
+    const response = yield Promise.race([task, timeoutPromise]);
+    if (timeout) { //the code works without this but let's be safe and clean up the timeout
+        clearTimeout(timeout);
+    }
+    return response;
 });
 /**
  * Summary: Get a deterministic challenge block for a file

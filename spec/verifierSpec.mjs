@@ -17,7 +17,10 @@ describe("IPFS Verifier Test Suite", function() {
         'Qmd63gzHfXCsJepsdTLd4cqigFa7SuCAeH6smsVoHovdbE',
         // Filecoin Whitepapr
         'QmdhGTx5URGR1EwAPTTBV17QBmX7PDhuHrfFoiVzSjBsu7',
-
+        // non-existant file
+        "Qmad1E95Qb4U329aHdGpxUuPRErYuFKGYpzNo6ZL8FPxwe",
+        // My transcript unpinned
+        'Qmad1E95Qb4U329aHdGpxUuPRErYuFKGYpzNo6ZL8FPxwz',
 
         // Non-Existent/Non-Pinned Files
         // ...
@@ -53,12 +56,34 @@ describe("IPFS Verifier Test Suite", function() {
         await testIPFSNode.stop();
     });
 
+   
     it("Verify inclusion of pinned files",  async function() {
         // Test the inclusion of one of our pinned files
-        let proof = fileProofDict[testCIDS[0]];
-        console.log("Testing inclusion of pinned file: " + testCIDS[0]);
-        let result = await fileStatus(testCIDS[0], proof, root);
-        expect(result).toBe(true);
+        for (var i = 0; i < 3; i++)
+        { 
+            let proof = fileProofDict[testCIDS[i]];
+            console.log("Testing inclusion of pinned file: " + testCIDS[i]);
+            let result = await fileStatus(testCIDS[i], proof, root);
+            expect(result).toBe(true);
+        }
+    }, 10000);
+
+    it("Verify exclusion of a non-existant", async function() {
+        // Test the exclusion of a file that is not pinned 
+        let proof = fileProofDict[testCIDS[3]];
+        console.log("Testing exclusion of non-existant file: " + testCIDS[3]);
+        let result = await fileStatus(testCIDS[3], proof, root);
+        expect(result).toBe(false);
+
+    }, 10000);
+
+    it("Verify exclusion of unpinned files", async function() {
+        // Test the exclusion of a file that is not pinned 
+        let proof = fileProofDict[testCIDS[4]];
+        console.log("Testing exclusion of unpinned file: " + testCIDS[4]);
+        let result = await fileStatus(testCIDS[4], proof, root);
+        expect(result).toBe(false);
+
     }, 10000);
 });
 
