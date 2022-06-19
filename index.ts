@@ -69,6 +69,8 @@ exports.fileProofMerkleRoot = async (
 
     // Create a new merkle tree
     var leaves = []
+    // Create a new list of valid CIDs
+    var validCIDs = []
     // For each CID, generate a proof of inclusion
     console.log("Generating proofs...")
     const proofProgressBar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
@@ -87,6 +89,7 @@ exports.fileProofMerkleRoot = async (
             }
             // Append a hash of the leaf to the list of leaves
             leaves.push(leaf)
+            validCIDs.push(CIDs[i])
         }
         else
             console.log("\nFILE FAILURE: ", CIDs[i])
@@ -96,7 +99,7 @@ exports.fileProofMerkleRoot = async (
     console.log("Generating Merkle Tree...")
     // Create a new merkle tree based on our leaves
     
-    leaves = leaves.map(x => SHA256(x.cid, x.stamp))
+    leaves = leaves.map(x => SHA256(JSON.stringify(x)))
     const tree = new MerkleTree(leaves, SHA256)
     // And get a root hash
     returnObject.root = tree.getRoot().toString('hex')
@@ -117,7 +120,7 @@ exports.fileProofMerkleRoot = async (
 
             // Call the callback with the proof object
             
-            options.proofCallback(CIDs[i], merkle_proof)
+            options.proofCallback(validCIDs[i], merkle_proof)
             proofProgressBar.update(i + 1)
         }
         proofProgressBar.stop();
@@ -139,10 +142,10 @@ exports.fileStatus = async (CID: String, proof: any, merkleRoot: TimestampedMerk
         stamp: merkleRoot.stampFunction(CID, merkleRoot.timestamp)
     }
 
-    console.log("Testing inclusions of Leaf: ", leaf)
+    //console.log("Testing inclusions of Leaf: ", leaf)
 
     // Verify the proof of inclusion using the Merkle Tree
-    return MerkleTree.verify(proof, SHA256(leaf.cid,leaf.stamp), merkleRoot.root)
+    return MerkleTree.verify(proof, SHA256(JSON.stringify(leaf)), merkleRoot.root)
 }
 
 /* Helper Functions and Defaults */
@@ -204,7 +207,7 @@ const fileProof = async (
     const source = (await toBuffer(ipfsNode.cat(CID)))   
     const hash = (await ipfsNode.add(source, {onlyHash: true })).cid.toString()
     let file_stored = (hash == CID)
-    console.log("\nFile Reachable: ", file_stored)
+    console.log("\File Reachable: ", file_stored)
     return file_stored
 }
 

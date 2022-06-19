@@ -22,6 +22,9 @@ describe("IPFS Verifier Test Suite", function() {
         // My transcript unpinned
         'Qmad1E95Qb4U329aHdGpxUuPRErYuFKGYpzNo6ZL8FPxwz',
 
+        // My thesis never pinned
+        "QmeQ3653QvNpZ4F2iJF5Q5chAPQHgf3VcLZo5HZfbBNJNg",
+
         // Non-Existent/Non-Pinned Files
         // ...
     ]
@@ -79,9 +82,10 @@ describe("IPFS Verifier Test Suite", function() {
 
     it("Verify exclusion of unpinned files", async function() {
         // Test the exclusion of a file that is not pinned 
-        let proof = fileProofDict[testCIDS[4]];
-        console.log("Testing exclusion of unpinned file: " + testCIDS[4]);
-        let result = await fileStatus(testCIDS[4], proof, root);
+        let proof = fileProofDict[testCIDS[5]];
+        console.log("PROOF: ", proof)
+        console.log("Testing exclusion of unpinned file: " + testCIDS[5]);
+        let result = await fileStatus(testCIDS[5], proof, root);
         expect(result).toBe(false);
 
     }, 10000);
