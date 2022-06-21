@@ -14,13 +14,13 @@ describe("IPFS Verifier Test Suite", function() {
         // The Bitcoin whitepaper
         {
             CID: 'QmRA3NWM82ZGynMbYzAgYTSXCVM14Wx1RZ8fKP42G6gjgj',
-            salt: 'Bitcoin',
+            // salt: 'Bitcoin',
         },
 
         // The Ehtereum whitepaper
         {
             CID: 'Qmd63gzHfXCsJepsdTLd4cqigFa7SuCAeH6smsVoHovdbE',
-            salt: 'Ethereum',
+            // salt: 'Ethereum',
         },
         //
         // // Filecoin Whitepaper

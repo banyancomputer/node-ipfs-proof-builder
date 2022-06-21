@@ -23,7 +23,7 @@ of a file on the IPFS network through merkle proofs.
  */
 export type fileObject = {
     CID: String,
-    salt: String
+    // salt: String
     // TODO: Expand this object as our proofs become more complex
     // ...
 }
@@ -33,8 +33,8 @@ export type fileObject = {
  */
 export type Leaf = {
     CID: String, // A CID,
-    salt: String // A random salt
     timestamp: String, // A timestamp
+    // salt: String // A random salt
 }
 
 /**
@@ -79,19 +79,14 @@ exports.fileProofMerkleRoot = async (
     files: fileObject[],
     options: Options = {}
 ): Promise<TimestampedMerkleRoot> => {
-    // console.log("Generating Merkle Root for CIDs: ", files)
-
-
     // Initialize our Merkle Tree
     let returnObject: TimestampedMerkleRoot = {
         root: '',
         timestamp: timestamp,
-        // stampFunction: options.stampFunction || defaultStamp
     }
 
     // Declare an array to hold our leaves
     let leaves = []
-    let stampedLeaves = []
 
     // For each CID, generate a proof of inclusion
     console.log("Generating proofs...")
@@ -113,7 +108,7 @@ exports.fileProofMerkleRoot = async (
             let leaf: Leaf = {
                 CID: files[i].CID,
                 timestamp: timestamp,
-                salt: files[i].salt
+                // salt: files[i].salt
             }
             // Append a hash of the leaf to the list of leaves
             leaves.push(leaf)
@@ -126,7 +121,7 @@ exports.fileProofMerkleRoot = async (
 
     // Generate the Merkle Tree using our stamp function
     // For some reason you can't pass a list of object as an argument to MerkleTree(), so stringify first
-    const tree = new MerkleTree(leaves.map(x => defaultStamp(x)), defaultStamp);
+    const tree = new MerkleTree(leaves.map(x => defaultStamp(x)), defaultStamp, {hashLeaves: false});
 
     // Extract our Root Hash of our Merkle Tree
     returnObject.root = tree.getRoot().toString('hex')

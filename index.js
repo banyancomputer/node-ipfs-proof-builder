@@ -33,16 +33,13 @@ const cliProgress = require('cli-progress');
     `proofCallback` should they want to store more information about the proofs.
  */
 exports.fileProofMerkleRoot = (timestamp, ipfsNode, files, options = {}) => __awaiter(void 0, void 0, void 0, function* () {
-    // console.log("Generating Merkle Root for CIDs: ", files)
     // Initialize our Merkle Tree
     let returnObject = {
         root: '',
         timestamp: timestamp,
-        // stampFunction: options.stampFunction || defaultStamp
     };
     // Declare an array to hold our leaves
     let leaves = [];
-    let stampedLeaves = [];
     // For each CID, generate a proof of inclusion
     console.log("Generating proofs...");
     const proofProgressBar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
@@ -59,7 +56,7 @@ exports.fileProofMerkleRoot = (timestamp, ipfsNode, files, options = {}) => __aw
             let leaf = {
                 CID: files[i].CID,
                 timestamp: timestamp,
-                salt: files[i].salt
+                // salt: files[i].salt
             };
             // Append a hash of the leaf to the list of leaves
             leaves.push(leaf);
@@ -70,7 +67,7 @@ exports.fileProofMerkleRoot = (timestamp, ipfsNode, files, options = {}) => __aw
     console.log("Generating Merkle Tree...");
     // Generate the Merkle Tree using our stamp function
     // For some reason you can't pass a list of object as an argument to MerkleTree(), so stringify first
-    const tree = new MerkleTree(leaves.map(x => defaultStamp(x)), defaultStamp);
+    const tree = new MerkleTree(leaves.map(x => defaultStamp(x)), defaultStamp, { hashLeaves: false });
     // Extract our Root Hash of our Merkle Tree
     returnObject.root = tree.getRoot().toString('hex');
     // console.log(tree.toString())
