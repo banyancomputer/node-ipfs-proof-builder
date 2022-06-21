@@ -6,12 +6,22 @@
   </a>
 </p>
 
-> This package describes a framework and implementation for proving the availability of files on an IPFS network.
+> This package describes a framework for proving the availability of files on an IPFS network.
+> 
+> It implements a method for testing the availability of a batch of files over IPFS, and recording their status in a Timestamped Root Hash
+> 
+> Storage proofs can be saved by the caller via a callback, and used to prove the availability of files during the specified timestamp
 
 ## Install
 
 ```sh
 npm install
+```
+
+## Building
+
+```sh
+npm run build
 ```
 
 ## Run tests
