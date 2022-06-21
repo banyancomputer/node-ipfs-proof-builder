@@ -120,7 +120,7 @@ exports.fileProofMerkleRoot = async (
     // If we have a callback for storing our proofs, call it on each leaf
     if (options.proofCallback) {
         console.log("Saving proofs...")
-        proofProgressBar.start(files.length, 0);
+        proofProgressBar.start(leaves.length, 0);
         // For each hashed leaf,
         for (let i = 0; i < leaves.length; i++) {
             // Declare a new fileProof object
@@ -182,8 +182,7 @@ const stampFunction = (leaf: Leaf): String => {
 const fileChallenge = async (
     ipfsNode: any,
     CID: String,
-    options: {timeout?: number}
-
+    options: {timeout?: number} = {}
 ) => {
     // Get a challenge block from the IPFS node
     // let challengeBlockCID = await getChallengeBlockCID(ipfsNode, CID)
@@ -202,14 +201,18 @@ const fileChallenge = async (
  * Summary: Prove that a file is available on the network.
  * @param ipfsNode: The IPFS node we want to use to generate the proof.
  * @param CID: The CID of the file we want to check.
+ * @param options: our optional arguments
+ *  timeout: how long we want to run our checks for before they fail
  * @returns boolean: True if the file is available on the network, false otherwise.
  */
  const fileProofDownload = async (
     ipfsNode: any,
     CID: String,
+    options: {timeout?: number} = {}
 ) => {
+    let proofTimeout = options.timeout || 1000  // ms
     const source = await toBuffer(ipfsNode.cat(CID))
-    const hash = await ipfsNode.add(source, {onlyHash: true }).cid.toString()
+    const hash = await ipfsNode.add(source, {onlyHash: true, timeout: proofTimeout}).cid.toString()
     return hash === CID
 }
 
@@ -238,8 +241,6 @@ const fileChallenge = async (
 //     }
 //     return response;
 // }
-
-
 
 /**
  * Summary: Determine the CID of a deterministic challenge block for a file
