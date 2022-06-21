@@ -8,7 +8,7 @@ describe("IPFS Verifier Test Suite", function() {
     let testIPFSNode, root;
 
     // Declare what files we want to test
-    const testFileObjects = [
+    const positiveTestFileObjects = [
         // Pinned Files
 
         // The Bitcoin whitepaper
@@ -22,17 +22,23 @@ describe("IPFS Verifier Test Suite", function() {
             CID: 'Qmd63gzHfXCsJepsdTLd4cqigFa7SuCAeH6smsVoHovdbE',
             // salt: 'Ethereum',
         },
-        //
-        // // Filecoin Whitepaper
-        // {
-        //     CID: 'QmdhGTx5URGR1EwAPTTBV17QBmX7PDhuHrfFoiVzSjBsu7',
-        //     salt: 'Filecoin'
-        // }
 
+        // Filecoin Whitepaper
+        {
+            CID: 'QmdhGTx5URGR1EwAPTTBV17QBmX7PDhuHrfFoiVzSjBsu7',
+            salt: 'Filecoin'
+        }
+    ]
 
-        // Non-Existent/Non-Pinned Files
+    // Declare what files we want to test
+    const negativeTestFileObjects = [
+        // non-Pinned / non-existent Files
+
         // ...
     ]
+
+    // Build our Tree using all of our objects
+    const testFileObjects = positiveTestFileObjects.concat(negativeTestFileObjects)
 
     // Declare a dictionary of proofs for each file
     let fileProofDict = {};
@@ -40,9 +46,7 @@ describe("IPFS Verifier Test Suite", function() {
     // Declare a callback to store the proofs
     const proofCallback = (fp) => {
         // console.log(fp)
-        fileProofDict[fp.leaf.CID] = {
-            leaf: fp.leaf, proof: fp.proof
-        };
+        fileProofDict[fp.CID] =  fp.proof
     };
 
     // Declare a Timestamp to test with
@@ -67,11 +71,31 @@ describe("IPFS Verifier Test Suite", function() {
 
     it("Verify inclusion of pinned files",  async function() {
         // Test the inclusion of one of our pinned files
-        console.log(fileProofDict)
-        let fp = fileProofDict[testFileObjects[0].CID];
-        console.log("Testing inclusion of pinned file: ", fp.leaf);
-        console.log("Proof: ", fp.proof);
-        let result = await fileStatus(fp.leaf, fp.proof, root);
-        expect(result).toBe(true);
+        // console.log(fileProofDict)
+        for (let i = 0; i < positiveTestFileObjects.length; i++) {
+            // Extract a CID
+            let CID = positiveTestFileObjects[i].CID
+
+            // Get the proof and test for inclusion
+            console.log("Positive Test: ", CID)
+            let proof = fileProofDict[CID];
+            let result = await fileStatus(CID, proof, root);
+            expect(result).toBe(true);
+        }
+    }, 10000);
+
+    it("Verify exclusion of fake files",  async function() {
+        // Test the inclusion of one of our pinned files
+        // console.log(fileProofDict)
+        for (let i = 0; i < negativeTestFileObjects.length; i++) {
+            // Extract a CID
+            let CID = negativeTestFileObjects[i].CID
+
+            // Get the proof and test for inclusion
+            console.log("Negative Test: ", CID)
+            let proof = fileProofDict[CID];
+            let result = await fileStatus(CID, proof, root);
+            expect(result).toBe(false);
+        }
     }, 10000);
 });

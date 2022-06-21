@@ -30,7 +30,7 @@ const cliProgress = require('cli-progress');
  *        @deprecated stampCallback: A callback that takes a leaf and returns the stamp of the leaf. This can be
  *          supplied in order to generate a custom stamp for your leaves. This must return a hash in the string.
  * @returns TimestampedMerkleRoot The merkle root of the network. It is the caller's responsibility to provide a
-    `proofCallback` should they want to store more information about the proofs.
+ *  `proofCallback` should they want to store more information about the proofs.
  */
 exports.fileProofMerkleRoot = (timestamp, ipfsNode, files, options = {}) => __awaiter(void 0, void 0, void 0, function* () {
     // Initialize our Merkle Tree
@@ -46,31 +46,26 @@ exports.fileProofMerkleRoot = (timestamp, ipfsNode, files, options = {}) => __aw
     proofProgressBar.start(files.length, 0);
     for (let i = 0; i < files.length; i++) {
         // Get the proof of inclusion, returns a boolean if the file is found
-        let available = yield fileChallenge(ipfsNode, files[i].CID);
-        // console.log(available ?
-        //     ("File Reachable: " + files[i].CID) :
-        //     ("File Unreachable: " + files[i].CID)
-        // )
-        // If the proof is valid, stamp it and add it to the list of leaves
-        if (available) {
+        let fileAvailable = yield fileChallenge(ipfsNode, files[i].CID);
+        // If the proof is valid, create a leaf in our Merkle Tree
+        if (fileAvailable) {
             let leaf = {
                 CID: files[i].CID,
                 timestamp: timestamp,
-                // salt: files[i].salt
             };
-            // Append a hash of the leaf to the list of leaves
+            // Append the leaf to the list of leaves
             leaves.push(leaf);
         }
         proofProgressBar.update(i + 1);
     }
     proofProgressBar.stop();
     console.log("Generating Merkle Tree...");
-    // Generate the Merkle Tree using our stamp function
-    // For some reason you can't pass a list of object as an argument to MerkleTree(), so stringify first
-    const tree = new MerkleTree(leaves.map(x => defaultStamp(x)), defaultStamp, { hashLeaves: false });
-    // Extract our Root Hash of our Merkle Tree
+    // Generate stamps of all the leaves to build our tree with
+    let stampedLeaves = leaves.map(x => stampFunction(x));
+    // Generate the tree
+    const tree = new MerkleTree(stampedLeaves, SHA256);
+    // Extract the Root Hash from our Merkle Tree
     returnObject.root = tree.getRoot().toString('hex');
-    // console.log(tree.toString())
     // If we have a callback for storing our proofs, call it on each leaf
     if (options.proofCallback) {
         console.log("Saving proofs...");
@@ -79,8 +74,9 @@ exports.fileProofMerkleRoot = (timestamp, ipfsNode, files, options = {}) => __aw
         for (let i = 0; i < leaves.length; i++) {
             // Declare a new fileProof object
             let fp = {
-                leaf: leaves[i],
-                proof: tree.getProof(defaultStamp(leaves[i]))
+                CID: leaves[i].CID,
+                // Retrieve the proof for the stamped leaf from the tree
+                proof: tree.getProof(stampedLeaves[i])
             };
             // Call the callback on the fileProof
             options.proofCallback(fp);
@@ -89,36 +85,32 @@ exports.fileProofMerkleRoot = (timestamp, ipfsNode, files, options = {}) => __aw
         proofProgressBar.stop();
     }
     // Return our Merkle Tree
-    console.log(returnObject);
     return returnObject;
 });
 /**
  * Summary: Verify a file's inclusion in a timestamped Merkle Tree
- * @param leaf: The leaf of the Merkle Tree we want to verify
+ * @param CID: the CID of the file we want to prove the availability of
  * @param proof: The proof of inclusion of the leaf
  * @param merkleRoot: The Timestamped Merkle Root of the network
  * @returns boolean: True if the file is available on the network, false otherwise
  */
-exports.fileStatus = (leaf, proof, merkleRoot) => __awaiter(void 0, void 0, void 0, function* () {
-    // Calculate the leaf of the file based on the CID and the timestamp
-    // console.log("Testing inclusions of Leaf: ", fp.leaf)
-    // Verify the proof of inclusion using the Merkle Tree Object
-    console.log("Verifying inclusion of Leaf: ", leaf);
-    console.log("With Proof: ", proof);
-    return MerkleTree.verify(proof, defaultStamp(leaf), merkleRoot.root);
+exports.fileStatus = (CID, proof, merkleRoot) => __awaiter(void 0, void 0, void 0, function* () {
+    // Determine the leaf of the file based on the CID and the timestamp
+    let leaf = {
+        CID: CID,
+        timestamp: merkleRoot.timestamp
+    };
+    // Verify the proof of inclusion using our Merkle Root
+    return MerkleTree.verify(proof, stampFunction(leaf), merkleRoot.root);
 });
 /* Helper Functions and Defaults */
 /**
- * Summary: Default stamp function that stamps a leaf use SHA256
+ * Summary: Function that stamps a leaf use SHA256
  * @param leaf: The leaf we want to stamp
- * @returns String: The stamp of the file
+ * @returns String: The stamp of the leaf
  */
-const defaultStamp = (leaf) => {
-    // check if the leaf is an object
-    if (leaf instanceof Object) {
-        leaf = JSON.stringify(leaf);
-    }
-    return SHA256(leaf).toString();
+const stampFunction = (leaf) => {
+    return SHA256(leaf.CID, leaf.timestamp).toString();
 };
 //TODO: Implement checking file status using Merkle Proofs
 /**
@@ -131,29 +123,25 @@ const fileChallenge = (ipfsNode, CID) => __awaiter(void 0, void 0, void 0, funct
     // Get a challenge block from the IPFS node
     // let challengeBlockCID = await getChallengeBlockCID(ipfsNode, CID)
     var e_1, _a;
-    // See if we can initiate a download based on a block ID
-    let ret = false;
     try {
-        // await ipfsNode.cat(challengeBlockCID)
-        //     .then(async (_: any) => {
-        //         ret = true
-        //     }).catch(async (err: any) => {
-        //         console.log(err)
-        // })
-        for (var _b = __asyncValues(ipfsNode.cat(CID)), _c; _c = yield _b.next(), !_c.done;) {
-            const chunk = _c.value;
-            ret = true;
-            break;
-        }
-    }
-    catch (e_1_1) { e_1 = { error: e_1_1 }; }
-    finally {
         try {
-            if (_c && !_c.done && (_a = _b.return)) yield _a.call(_b);
+            for (var _b = __asyncValues(ipfsNode.cat(CID)), _c; _c = yield _b.next(), !_c.done;) {
+                const _ = _c.value;
+                return true;
+            }
         }
-        finally { if (e_1) throw e_1.error; }
+        catch (e_1_1) { e_1 = { error: e_1_1 }; }
+        finally {
+            try {
+                if (_c && !_c.done && (_a = _b.return)) yield _a.call(_b);
+            }
+            finally { if (e_1) throw e_1.error; }
+        }
     }
-    return ret;
+    catch (e) {
+        console.log(e);
+        return false;
+    }
 });
 /**
  * Summary: Determine the CID of a deterministic challenge block for a file
@@ -163,7 +151,6 @@ const fileChallenge = (ipfsNode, CID) => __awaiter(void 0, void 0, void 0, funct
  */
 const getChallengeBlockCID = (ipfsNode, CID) => __awaiter(void 0, void 0, void 0, function* () {
     // Get all the block IDs for the file
-    console.log("eggg");
     const links = yield ipfsNode.object.links(CID);
     const hashes = links.map((link) => link.Hash.toString());
     // Get a deterministic block index based on the hash of the file and the current time
