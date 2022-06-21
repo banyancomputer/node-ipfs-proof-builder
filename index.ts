@@ -1,6 +1,8 @@
 const { MerkleTree } = require('merkletreejs');
 const SHA256 = require('crypto-js/sha256');
 const cliProgress = require('cli-progress');
+const toBuffer = require('it-to-buffer')
+
 
 /**
  * The IPFS Verifier that is used to check the status of a batch of files on the IPFS network.
@@ -91,7 +93,7 @@ exports.fileProofMerkleRoot = async (
 
     for (let i = 0; i < files.length; i++) {
         // Get the proof of inclusion, returns a boolean if the file is found
-        let fileAvailable = await fileChallenge(ipfsNode, files[i].CID)
+        let fileAvailable = await fileChallenge(ipfsNode, files[i].CID, {timeout: 1000})
 
         // If the proof is valid, create a leaf in our Merkle Tree
         if (fileAvailable) {
@@ -140,7 +142,7 @@ exports.fileProofMerkleRoot = async (
 
 /**
  * Summary: Verify a file's inclusion in a timestamped Merkle Tree
- * @param CID: the CID of the file we want to prove the availability of
+ * @param CID: The CID of the file we want to prove the availability of
  * @param proof: The proof of inclusion of the leaf
  * @param merkleRoot: The Timestamped Merkle Root of the network
  * @returns boolean: True if the file is available on the network, false otherwise
@@ -167,27 +169,76 @@ const stampFunction = (leaf: Leaf): String => {
     return SHA256(leaf.CID, leaf.timestamp).toString()
 }
 
+
 //TODO: Implement checking file status using Merkle Proofs
+/**
+ * Summary: Prove that a file is available on the network.
+ * @param ipfsNode: The IPFS node we want to use to generate the proof.
+ * @param CID: The CID of the file we want to check.
+ * @param options: optional arguments:
+ *  timeout: how long we should try downloading a file before giving up
+ * @returns boolean: True if the file is available on the network, false otherwise.
+ */
+const fileChallenge = async (
+    ipfsNode: any,
+    CID: String,
+    options: {timeout?: number}
+
+) => {
+    // Get a challenge block from the IPFS node
+    // let challengeBlockCID = await getChallengeBlockCID(ipfsNode, CID)
+    let challengeTimeout = options.timeout || 1000
+
+    try {
+        for await (const _ of ipfsNode.cat(CID, {timeout: challengeTimeout})) { return true }
+    } catch (e) {
+        // console.log(e)
+        return false
+    }
+}
+
+
 /**
  * Summary: Prove that a file is available on the network.
  * @param ipfsNode: The IPFS node we want to use to generate the proof.
  * @param CID: The CID of the file we want to check.
  * @returns boolean: True if the file is available on the network, false otherwise.
  */
-const fileChallenge = async (
+ const fileProofDownload = async (
     ipfsNode: any,
     CID: String,
 ) => {
-    // Get a challenge block from the IPFS node
-    // let challengeBlockCID = await getChallengeBlockCID(ipfsNode, CID)
-
-    try {
-        for await (const _ of ipfsNode.cat(CID)) { return true }
-    } catch (e) {
-        console.log(e)
-        return false
-    }
+    const source = await toBuffer(ipfsNode.cat(CID))
+    const hash = await ipfsNode.add(source, {onlyHash: true }).cid.toString()
+    return hash === CID
 }
+
+/**
+ * Summary: Fulfill a promise within a given time limit. If not fulfilled then return failure value
+ * @param timeLimit: The max time to fulfill the promise
+ * @param task: The Promise being limited
+ * @param failureValue: The return value if the time limit is exceeded
+ * @returns any: Failure value if timeout, the return type of the task if succeeds
+ */
+// const fulfillWithTimeLimit = async (
+//     timeLimit: number,
+//     task: Promise<boolean>,
+//     failureValue: any
+//     ) => {
+//
+//     let timeout;
+//     const timeoutPromise = new Promise((resolve, reject) => {
+//         timeout = setTimeout(() => {
+//             resolve(failureValue);
+//         }, timeLimit);
+//     });
+//     const response = await Promise.race([task, timeoutPromise]);
+//     if(timeout){ //the code works without this but let's be safe and clean up the timeout
+//         clearTimeout(timeout);
+//     }
+//     return response;
+// }
+
 
 
 /**

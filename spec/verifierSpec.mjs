@@ -13,20 +13,17 @@ describe("IPFS Verifier Test Suite", function() {
 
         // The Bitcoin whitepaper
         {
-            CID: 'QmRA3NWM82ZGynMbYzAgYTSXCVM14Wx1RZ8fKP42G6gjgj',
-            // salt: 'Bitcoin',
+            CID: 'QmRA3NWM82ZGynMbYzAgYTSXCVM14Wx1RZ8fKP42G6gjgj'
         },
 
         // The Ehtereum whitepaper
         {
-            CID: 'Qmd63gzHfXCsJepsdTLd4cqigFa7SuCAeH6smsVoHovdbE',
-            // salt: 'Ethereum',
+            CID: 'Qmd63gzHfXCsJepsdTLd4cqigFa7SuCAeH6smsVoHovdbE'
         },
 
         // Filecoin Whitepaper
         {
-            CID: 'QmdhGTx5URGR1EwAPTTBV17QBmX7PDhuHrfFoiVzSjBsu7',
-            salt: 'Filecoin'
+            CID: 'QmdhGTx5URGR1EwAPTTBV17QBmX7PDhuHrfFoiVzSjBsu7'
         }
     ]
 
@@ -34,7 +31,15 @@ describe("IPFS Verifier Test Suite", function() {
     const negativeTestFileObjects = [
         // non-Pinned / non-existent Files
 
-        // ...
+        // Multihash of Jonah's Transcript
+        {
+            CID: 'Qmad1E95Qb4U329aHdGpxUuPRErYuFKGYpzNo6ZL8FPxwe'
+        },
+
+        // Multihash of Jonah's Thesis
+        {
+            CID: 'QmeQ3653QvNpZ4F2iJF5Q5chAPQHgf3VcLZo5HZfbBNJNg'
+        }
     ]
 
     // Build our Tree using all of our objects
@@ -84,7 +89,7 @@ describe("IPFS Verifier Test Suite", function() {
         }
     }, 10000);
 
-    it("Verify exclusion of fake files",  async function() {
+    it("Verify exclusion of unpinned/non-extant files",  async function() {
         // Test the inclusion of one of our pinned files
         // console.log(fileProofDict)
         for (let i = 0; i < negativeTestFileObjects.length; i++) {
@@ -99,3 +104,4 @@ describe("IPFS Verifier Test Suite", function() {
         }
     }, 10000);
 });
+
