@@ -8,35 +8,50 @@ describe("IPFS Verifier Test Suite", function() {
     let testIPFSNode, root;
 
     // Declare what files we want to test
-    const testCIDS = [
+    const positiveTestFileObjects = [
         // Pinned Files
 
         // The Bitcoin whitepaper
-        'QmRA3NWM82ZGynMbYzAgYTSXCVM14Wx1RZ8fKP42G6gjgj',
+        {
+            CID: 'QmRA3NWM82ZGynMbYzAgYTSXCVM14Wx1RZ8fKP42G6gjgj'
+        },
+
         // The Ehtereum whitepaper
-        'Qmd63gzHfXCsJepsdTLd4cqigFa7SuCAeH6smsVoHovdbE',
-        // Filecoin Whitepapr
-        'QmdhGTx5URGR1EwAPTTBV17QBmX7PDhuHrfFoiVzSjBsu7',
-        // non-existant file
-        "Qmad1E95Qb4U329aHdGpxUuPRErYuFKGYpzNo6ZL8FPxwe",
-        // My transcript unpinned
-        'Qmad1E95Qb4U329aHdGpxUuPRErYuFKGYpzNo6ZL8FPxwz',
+        {
+            CID: 'Qmd63gzHfXCsJepsdTLd4cqigFa7SuCAeH6smsVoHovdbE'
+        },
 
-        // My thesis never pinned
-        "QmeQ3653QvNpZ4F2iJF5Q5chAPQHgf3VcLZo5HZfbBNJNg",
-
-        // Non-Existent/Non-Pinned Files
-        // ...
+        // Filecoin Whitepaper
+        {
+            CID: 'QmdhGTx5URGR1EwAPTTBV17QBmX7PDhuHrfFoiVzSjBsu7'
+        }
     ]
+
+    // Declare what files we want to test
+    const negativeTestFileObjects = [
+        // non-Pinned / non-existent Files
+
+        // Multihash of Jonah's Transcript
+        {
+            CID: 'Qmad1E95Qb4U329aHdGpxUuPRErYuFKGYpzNo6ZL8FPxwe'
+        },
+
+        // Multihash of Jonah's Thesis
+        {
+            CID: 'QmeQ3653QvNpZ4F2iJF5Q5chAPQHgf3VcLZo5HZfbBNJNg'
+        }
+    ]
+
+    // Build our Tree using all of our objects
+    const testFileObjects = positiveTestFileObjects.concat(negativeTestFileObjects)
 
     // Declare a dictionary of proofs for each file
     let fileProofDict = {};
 
     // Declare a callback to store the proofs
-    const proofCallback = (cid, proof) => {
-        // console.log(`Proof for ${cid}`);
-        // console.log(proof);
-        fileProofDict[cid] = proof;
+    const proofCallback = (fp) => {
+        // console.log(fp)
+        fileProofDict[fp.CID] =  fp.proof
     };
 
     // Declare a Timestamp to test with
@@ -50,7 +65,7 @@ describe("IPFS Verifier Test Suite", function() {
 
         // Build a new Merkle Root
         console.log("Building Merkle Root...");
-        root = await fileProofMerkleRoot(testTimestamp, testIPFSNode, testCIDS, {proofCallback: proofCallback});
+        root = await fileProofMerkleRoot(testTimestamp, testIPFSNode, testFileObjects, {proofCallback: proofCallback});
         console.log("Testing against new Root: " + JSON.stringify(root));
     }, 300000);
 
@@ -59,35 +74,34 @@ describe("IPFS Verifier Test Suite", function() {
         await testIPFSNode.stop();
     });
 
-   
     it("Verify inclusion of pinned files",  async function() {
         // Test the inclusion of one of our pinned files
-        for (var i = 0; i < 3; i++)
-        { 
-            let proof = fileProofDict[testCIDS[i]];
-            console.log("Testing inclusion of pinned file: " + testCIDS[i]);
-            let result = await fileStatus(testCIDS[i], proof, root);
+        // console.log(fileProofDict)
+        for (let i = 0; i < positiveTestFileObjects.length; i++) {
+            // Extract a CID
+            let CID = positiveTestFileObjects[i].CID
+
+            // Get the proof and test for inclusion
+            console.log("Positive Test: ", CID)
+            let proof = fileProofDict[CID];
+            let result = await fileStatus(CID, proof, root);
             expect(result).toBe(true);
         }
     }, 10000);
 
-    it("Verify exclusion of a non-existant", async function() {
-        // Test the exclusion of a file that is not pinned 
-        let proof = fileProofDict[testCIDS[3]];
-        console.log("Testing exclusion of non-existant file: " + testCIDS[3]);
-        let result = await fileStatus(testCIDS[3], proof, root);
-        expect(result).toBe(false);
+    it("Verify exclusion of unpinned/non-extant files",  async function() {
+        // Test the inclusion of one of our pinned files
+        // console.log(fileProofDict)
+        for (let i = 0; i < negativeTestFileObjects.length; i++) {
+            // Extract a CID
+            let CID = negativeTestFileObjects[i].CID
 
-    }, 10000);
-
-    it("Verify exclusion of unpinned files", async function() {
-        // Test the exclusion of a file that is not pinned 
-        let proof = fileProofDict[testCIDS[5]];
-        console.log("PROOF: ", proof)
-        console.log("Testing exclusion of unpinned file: " + testCIDS[5]);
-        let result = await fileStatus(testCIDS[5], proof, root);
-        expect(result).toBe(false);
-
+            // Get the proof and test for inclusion
+            console.log("Negative Test: ", CID)
+            let proof = fileProofDict[CID];
+            let result = await fileStatus(CID, proof, root);
+            expect(result).toBe(false);
+        }
     }, 10000);
 });
 
