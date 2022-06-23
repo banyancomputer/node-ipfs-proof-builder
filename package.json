@@ -1,6 +1,6 @@
 {
   "name": "nodejs-ipfs-verifier",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "A verification library for our IPFS oracle",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
