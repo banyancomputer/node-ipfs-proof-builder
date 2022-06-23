@@ -217,32 +217,6 @@ const fileChallenge = async (
 }
 
 /**
- * Summary: Fulfill a promise within a given time limit. If not fulfilled then return failure value
- * @param timeLimit: The max time to fulfill the promise
- * @param task: The Promise being limited
- * @param failureValue: The return value if the time limit is exceeded
- * @returns any: Failure value if timeout, the return type of the task if succeeds
- */
-// const fulfillWithTimeLimit = async (
-//     timeLimit: number,
-//     task: Promise<boolean>,
-//     failureValue: any
-//     ) => {
-//
-//     let timeout;
-//     const timeoutPromise = new Promise((resolve, reject) => {
-//         timeout = setTimeout(() => {
-//             resolve(failureValue);
-//         }, timeLimit);
-//     });
-//     const response = await Promise.race([task, timeoutPromise]);
-//     if(timeout){ //the code works without this but let's be safe and clean up the timeout
-//         clearTimeout(timeout);
-//     }
-//     return response;
-// }
-
-/**
  * Summary: Determine the CID of a deterministic challenge block for a file
  * @param ipfsNode: The IPFS node we want to use to generate the challenge block.
  * @param CID: The CID of the file we want to get a challenge block for.
