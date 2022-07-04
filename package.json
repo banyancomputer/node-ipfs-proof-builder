@@ -1,7 +1,7 @@
 {
-  "name": "nodejs-ipfs-verifier",
+  "name": "ipfs-oracle",
   "version": "0.0.7",
-  "description": "A verification library for our IPFS oracle",
+  "description": "An IPFS oracle for reporting merkle proofs to a verifier",
   "main": "index.js",
   "types": "index.d.ts",
   "scripts": {
