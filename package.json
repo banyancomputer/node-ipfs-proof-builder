@@ -22,7 +22,10 @@
     "blockstore-core": "^1.0.2",
     "cli-progress": "^3.11.1",
     "crypto-js": "^4.1.1",
+    "get-random-values": "^2.0.0",
     "ipfs-core": "^0.15.2",
-    "merkletreejs": "^0.2.31"
+    "it-to-buffer": "^2.0.2",
+    "merkletreejs": "^0.2.31",
+    "to-buffer": "^1.1.1"
   }
 }
