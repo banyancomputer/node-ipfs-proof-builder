@@ -1,5 +1,4 @@
 const SHA256 = require('crypto-js/sha256');
-const cliProgress = require('cli-progress');
 const toBuffer = require('it-to-buffer');
 
 /**
@@ -13,16 +12,15 @@ const toBuffer = require('it-to-buffer');
  */
 
 /**
- * This type specifies what type of data we associate with a file in our network.
- * Each file should be indexed by a CID
+ * This type describes what type of data we associate with a file in our network.
+ * Each file should be indexed by a CID and should include a reference/path to an obao file
  */
-export type fileObject = {
+export type fileDesc = {
     CID: String,  // The CID of the file
-    tree: String, // The tree describing the file
+    oboaPath: String, // The tree describing the file
 
     // TODO: Expand this object as our proofs become more complex
     // endpoints: ...
-    // baoFile: ...
 }
 
 /**
@@ -31,13 +29,14 @@ export type fileObject = {
 export type fileProof = {
     CID: String // A CID for lookup
     challenge: String // The challenge hash
-    proof: any  // Some proof that works with our Merkle Library
+    proof: any[]  // Some proof that works with our Merkle Library
     err: any // An error if one occurred during querying for a file
 }
 
 
 export type Options = {
-    proofCallback?: (fp: fileProof) => void
+    obaoCallback?: (obaoPath: String) => Promise<any>,
+    challengeTimeout?: number
 }
 
 /**
@@ -45,83 +44,56 @@ export type Options = {
  * @param ipfsNode:  The IPFS node we want to use in order to generate the root.
  * @param files:      The list of filesObjects we want to check.
  * @param options:  An object containing the following optional arguments:
- *        proofCallback: A callback that takes a fileProof object in as an argument. This can be used to store fileProofs
- *          in a database of your choice, or submit them to a verifier. It is the responsibility of the caller to
- *          provide a callback.
- * @returns {void}
+ *      - obaoCallback: A custom callback for reading obao files given an oboaPath
+ *      - challengeTimeout: how long to attempt querying for a challenge before timing out
+ * @returns {fileProof}
  */
 
-exports.proofOracle = async (
+exports.buildProof = async (
     timestamp: String,
     ipfsNode: any,
-    files: fileObject[],
+    file: fileDesc,
     options: Options = {}
-): Promise<void> => {
-    // Initialize our Merkle Tree
-    console.log("Submitting proofs...")
-
-    const proofProgressBar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
-    proofProgressBar.start(files.length, 0);
-
-    for (let i = 0; i < files.length; i++) {
-        // Get the proof of inclusion, returns a boolean if the file is found
-        let proof = await fileChallenge(ipfsNode, files[i])
-
-        // If the proof is valid, create a leaf in our Merkle Tree
-        if (options.proofCallback) {
-            // Retrun the proof to the caller
-            options.proofCallback(proof)
-        }
-        proofProgressBar.update(i + 1)
-    }
-    proofProgressBar.stop();
-}
-
-/**
- * Summary: Build a fileProof for the availability of a file based on a fileObject.
- * @param ipfsNode: The IPFS node we want to use to generate the proof.
- * @param  fileObject: The fileObject we want to check.
- * @param options: optional arguments:
- *  timeout: how long we should try downloading a file before giving up
- * @returns fileProof: should be enough to verify the availability of a file
- */
-const fileChallenge = async (
-    ipfsNode: any,
-    fileObject: fileObject,
-    options: {timeout?: number} = {}
-) => {
-    // Declare a variable to hold our fileProof
+): Promise<fileProof> => {
+    // Declare a return object to hold our fileProof
     let result: fileProof = {
-        CID: fileObject.CID,
+        CID: file.CID,
         challenge: '',
         proof: [],
         err: ''
     }
 
     // Determine the challenge block CID for the file
-    let challengeCID = await getChallengeBlockCID(ipfsNode, fileObject.CID)
+    let challengeCID = await getChallengeBlockCID(ipfsNode, file.CID)
 
-    // Get the challenge block, keepig track of errors
+    // Get the challenge block, keeping track of errors
     try {
-        result.challenge = await ipfsNode.cat(challengeCID, {timeout: options.timeout || 1000})
+        result.challenge = await ipfsNode.cat(challengeCID, {timeout: options.challengeTimeout || 1000})
     }
     catch (err) {
         result.err = err
     }
 
     // Build a proof for the challenge block
-    result.proof = await getFileProofHashes(result.challenge, fileObject.tree)
+    if (options.obaoCallback) {
+        // Read in the obao file using the specified callback
+        let obaoFile: any = await options.obaoCallback(file.oboaPath)
+        // Build the proof for the challenge block
+        result.proof = await getFileProofHashes(result.challenge, obaoFile)
+    } else {
+        console.log("Warning: No obao callback specified, skipping proof building")
+    }
 
     // Return the fileProof
     return result
 }
 
 /**
- * Summary: Get the proof for a challenge block based on its Merkle Strcture.
- * @param challenge
- * @param tree
+ * Summary: Get the proof for a challenge block based on its Merkle Structure.
+ * @param challenge: The challenge block we want to get a proof for.
+ * @param obaoFile: The obao file we want to use to get the proof.
  */
-const getFileProofHashes = async (challenge: String, tree: String) => {
+const getFileProofHashes = async (challenge: String, obaoFile: any) => {
     return []
 }
 
