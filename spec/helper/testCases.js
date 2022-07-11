@@ -76,7 +76,7 @@ const buildTestCase = async (filePath, pinned, ipfsNode) => {
     let obao = fs.readFileSync(obaoPath);
 
     // Determine the Root used to verify proofs
-    let obaoRoot = oboa + '-root'
+    let obaoRoot = obao + '-root'
 
     return {
         fileDesc: {

@@ -6,11 +6,14 @@
   </a>
 </p>
 
-> This package describes a framework for proving the availability of files on an IPFS network.
+> This package implements a Merkle Proof Builder over IPFS.
 > 
-> It implements a method for testing the availability of a batch of files over IPFS, and recording their status in a Timestamped Root Hash
+> Given a description of a File Stored on IPFS, it:
+>   1. Queries for a Challenge Block
+>   2. Builds a proof for that block from an `obao` file
+>   3. Returns the built proof to the caller
 > 
-> Storage proofs can be saved by the caller via a callback, and used to prove the availability of files during the specified timestamp
+> `obao` files must be provided by the caller, and accessed through a custom callback
 
 ## Install
 
@@ -25,7 +28,9 @@ npm run build
 ```
 
 ## Run tests
-
+Populate `spec/testCases/testFiles/pinned` with files that you know are pinned or available over IPFS. These can be gathered through an IPFS gateway.
+Populate `spec/testCases/testFiles/unpinned` with files that you know are not pinned or available over IPFS. Try using personal data you know isn't public, or random generated text files.
+Given these files, our test script pre-processes them into `obao` files that can be used to test our proof builder.
 ```sh
 npm test
 ```
