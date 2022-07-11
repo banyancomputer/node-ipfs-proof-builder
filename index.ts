@@ -15,7 +15,7 @@ const toBuffer = require('it-to-buffer');
  * This type describes what type of data we associate with a file in our network.
  * Each file should be indexed by a CID and should include a reference/path to an obao file
  */
-export type FileDesc = {
+export type FileDescription = {
     CID: String,  // The CID of the file
     oboaPath: String, // The tree describing the file
 
@@ -52,7 +52,7 @@ export type Options = {
 exports.buildProof = async (
     timestamp: String,
     ipfsNode: any,
-    file: FileDesc,
+    file: FileDescription,
     options: Options = {}
 ): Promise<FileProof> => {
     // Declare a return object to hold our fileProof

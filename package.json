@@ -1,5 +1,5 @@
 {
-  "name": "ipfs-oracle",
+  "name": "ipfs-proof-oracle",
   "version": "0.0.7",
   "description": "An IPFS oracle for reporting merkle proofs to a verifier",
   "main": "index.js",

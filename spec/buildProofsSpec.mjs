@@ -1,6 +1,6 @@
 import * as IPFS from 'ipfs-core';
 const fs = require('fs');
-const {FileDesc, FileProof} = require('../index');
+const {FileDescription, FileProof} = require('../index');
 const {buildTestCases} = require('helpers/testCases');
 
 

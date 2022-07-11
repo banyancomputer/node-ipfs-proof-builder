@@ -1,9 +1,9 @@
-const {FileDesc} = require('../../index');
+const {FileDescription} = require('../../index');
 const fs = require('fs');
 
 // Each Test Case is described by
 export type TestCase = {
-    fileDesc: FileDesc, // The File Description of the test case file
+    fileDesc: FileDescription, // The File Description of the test case file
     fileRoot: String,  // THe Merkle Root of the test case
     filePinned: Boolean // Whether the file is pinned on IPFS
 }
