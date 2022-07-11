@@ -15,7 +15,7 @@ const toBuffer = require('it-to-buffer');
  * This type describes what type of data we associate with a file in our network.
  * Each file should be indexed by a CID and should include a reference/path to an obao file
  */
-export type fileDesc = {
+export type FileDesc = {
     CID: String,  // The CID of the file
     oboaPath: String, // The tree describing the file
 
@@ -26,7 +26,7 @@ export type fileDesc = {
 /**
  * This type specifies what is needed for a verifier to prove that a file is available.
  */
-export type fileProof = {
+export type FileProof = {
     CID: String // A CID for lookup
     challenge: String // The challenge hash
     proof: any[]  // Some proof that works with our Merkle Library
@@ -46,17 +46,17 @@ export type Options = {
  * @param options:  An object containing the following optional arguments:
  *      - obaoCallback: A custom callback for reading obao files given an oboaPath
  *      - challengeTimeout: how long to attempt querying for a challenge before timing out
- * @returns {fileProof}
+ * @returns {FileProof}
  */
 
 exports.buildProof = async (
     timestamp: String,
     ipfsNode: any,
-    file: fileDesc,
+    file: FileDesc,
     options: Options = {}
-): Promise<fileProof> => {
+): Promise<FileProof> => {
     // Declare a return object to hold our fileProof
-    let result: fileProof = {
+    let result: FileProof = {
         CID: file.CID,
         challenge: '',
         proof: [],

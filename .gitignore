@@ -1,2 +1,7 @@
 node_modules/*
 .idea/*
+
+# Ignore Test Files when committing
+spec/testCases/testBaos/*
+spec/testCases/testFiles/pinned/*
+spec/testCases/testFiles/unpinned/*
