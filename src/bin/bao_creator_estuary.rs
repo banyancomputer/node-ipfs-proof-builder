@@ -2,9 +2,6 @@
 This script should be integrated with Estuary. The OBAO file should be sent to the oracle for proof construction, and to the 
 client for verified streaming. The hash should be sent to Governance for verification. 
 */
-
-use std::io::prelude::*;
-use std::io::Cursor;
 use bao::Hash;
 
 // Create an outboard encoding of the input file. 

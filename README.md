@@ -22,12 +22,14 @@ npm install
 
 ```sh
 npm run build
+cargo build 
 ```
 
 ## Run tests
 
 ```sh
 npm test
+cargo test
 ```
 
 ## Author
