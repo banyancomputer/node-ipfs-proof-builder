@@ -1,5 +1,4 @@
 const SHA256 = require('crypto-js/sha256');
-const toBuffer = require('it-to-buffer');
 
 /**
  * The IPFS oracle that is used to query challenge blocks and submit proofs to a verifier.
@@ -22,7 +21,7 @@ export type FileProof = {
     CID: String // A CID for lookup
     challenge: String // The challenge hash
     proof: any[]  // Some proof that works with our Merkle Library
-    err: any // An error if one occurred during querying for a file
+    err: String // An error if one occurred during querying for a file
 }
 
 /**
@@ -35,16 +34,15 @@ export type Options = {
 
 /**
  * Summary: Generate a stamped merkle root for our network based on a list of CIDS.
- * @param ipfsNode:  The IPFS node we want to use in order to generate the root.
- * @param files:      The list of filesObjects we want to check.
+ * @param ipfsNode:  The IPFS node we want to use in order query for a challenge.
+ * @param file:      The list of filesObjects we want to check.
  * @param options:  An object containing the following optional arguments:
  *      - obaoCallback: A custom callback for reading obao files given an oboaPath
  *      - challengeTimeout: how long to attempt querying for a challenge before timing out
  * @returns {FileProof}
  */
 
-exports.buildProof = async (
-    timestamp: String,
+export const buildProof = async (
     ipfsNode: any,
     file: FileDescription,
     options: Options = {}
@@ -64,8 +62,8 @@ exports.buildProof = async (
     try {
         result.challenge = await ipfsNode.cat(challengeCID, {timeout: options.challengeTimeout || 1000})
     }
-    catch (err) {
-        result.err = err
+    catch (err: any) {
+        result.err = err.toString();
     }
 
     // Build a proof for the challenge block
@@ -88,6 +86,7 @@ exports.buildProof = async (
  * @param obaoFile: The obao file we want to use to get the proof.
  */
 const getFileProofHashes = async (challenge: String, obaoFile: any) => {
+    //TODO: Implement
     return []
 }
 

@@ -1,7 +1,7 @@
 import * as IPFS from 'ipfs-core';
-const fs = require('fs');
-const {FileDescription, FileProof} = require('../src');
-const {buildTestCases} = require('helpers/testCases');
+import * as fs from 'fs';
+import * as buildTestCases from "./helper/testCases.js";
+// const {buildTestCases} = require('helpers/testCases');
 
 
 describe("IPFS Proof Builder", function() {
@@ -16,7 +16,7 @@ describe("IPFS Proof Builder", function() {
     }, 10000)
 
     // Declare a callback to read our bao file in with
-    const proofCallback = (baoPath) => {
+    const baoCallback = (baoPath) => {
         // console.log(fp)
         return fs.readFileSync(baoPath)
     };

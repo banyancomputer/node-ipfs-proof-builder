@@ -1,23 +1,13 @@
-const {FileDescription} = require('../../src');
 const fs = require('fs');
-
-// Each Test Case is described by
-export type TestCase = {
-    fileDesc: FileDescription, // The File Description of the test case file
-    fileRoot: String,  // THe Merkle Root of the test case
-    filePinned: Boolean // Whether the file is pinned on IPFS
-}
 
 /**
  * Summary: Builds a list of test cases from a list of files
  * @param ipfsNode: A node for generating CIDs
  * @return {Promise<*[]>}
  */
-export const buildTestCases = async (ipfsNode) => {
+const buildTestCases = async (ipfsNode) => {
     let pinnedFilesDir =  './test/testFiles/pinned';
     let unpinnedFilesDir = './test/testFiles/unpinned';
-
-    // Iterate through the pinned files
 
     // Build our pinned test cases
     let pinnedTestCases = [];
@@ -40,6 +30,8 @@ export const buildTestCases = async (ipfsNode) => {
     return pinnedTestCases.concat(unpinnedTestCases);
 }
 
+module.exports = buildTestCases;
+
 /**
  * Summary: Preprocess a local file in to a test case by generating a CID and obao file
  * @param {string} filePath: the path to the file to preprocess
@@ -49,17 +41,20 @@ export const buildTestCases = async (ipfsNode) => {
  */
 const buildTestCase = async (filePath, pinned, ipfsNode) => {
     // Read in the file
-    let file = '';
-    // Get its CID over IPFS
+    let file = fs.readFileSync(filePath);
+    // TODO: Get its CID over IPFS
     let CID = '';
 
+    let testCase;
     let obaoPath = 'testCases/testBaos/' + filePath;
-    // Check if the file's obao is already available
-    fs.stat(obaoPath, function(err, stat) {
+
+    await fs.stat(obaoPath, function(err, stat) {
         // If the file exists
+        let obao;
+        // If the files does not exist, generate a new one
         if (err.code === 'ENOENT') {
-            // Build the obao
-            let obao = 'test';
+            // TODO: Build the obao
+            obao = 'test';
             // Write the obao to obaoPath
             fs.writeFile(obaoPath, obao, function(err) {
                 if (err) {
@@ -68,22 +63,20 @@ const buildTestCase = async (filePath, pinned, ipfsNode) => {
                 }
             });
         } else {
-            console.log('Unexpected error creating obao', err.code);
+            let obao = fs.readFileSync(obaoPath);
+        }
+        // Determine the Root of the obao file
+        let obaoRoot = obao + '-root'
+
+        // Create a test case
+        testCase = {
+            fileDescription: {
+                CID: CID,
+                obaoPath: obaoPath,
+            },
+            fileRoot: obaoRoot,
+            pinned: pinned,
         }
     });
-
-    // Read in the obao
-    let obao = fs.readFileSync(obaoPath);
-
-    // Determine the Root used to verify proofs
-    let obaoRoot = obao + '-root'
-
-    return {
-        fileDesc: {
-            CID: CID,
-            obaoPath: obaoPath
-        },
-        fileRoot: obaoRoot,
-        filePinned: pinned
-    }
+    return testCase;
 }
