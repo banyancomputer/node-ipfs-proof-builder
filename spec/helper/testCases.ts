@@ -1,4 +1,4 @@
-const {FileDescription} = require('../../index');
+const {FileDescription} = require('../../src');
 const fs = require('fs');
 
 // Each Test Case is described by
@@ -41,7 +41,7 @@ export const buildTestCases = async (ipfsNode) => {
 }
 
 /**
- * Summary: Preprocess a local file in to a test case
+ * Summary: Preprocess a local file in to a test case by generating a CID and obao file
  * @param {string} filePath: the path to the file to preprocess
  * @param {boolean} pinned: whether the file is pinned on IPFS
  * @param {any} ipfsNode: the IPFS node to use for the test (in order to generate CIDs)

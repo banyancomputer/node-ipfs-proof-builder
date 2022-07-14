@@ -2,20 +2,28 @@
   "name": "ipfs-proof-oracle",
   "version": "0.0.7",
   "description": "An IPFS oracle for reporting merkle proofs to a verifier",
-  "main": "index.js",
-  "types": "index.d.ts",
+  "main": "dsit/index.js",
+  "types": "src/index.d.ts",
   "scripts": {
     "prepublish": "npm run build",
-    "build": "tsc",
-    "test": "jasmine"
+    "build": "npx webpack --config=webpack.config.js",
+    "test": "jasmine-ts --config=jasmine.json"
   },
   "keywords": [],
   "author": "Alex Miller and Jonah Kaye",
   "license": "ISC",
   "devDependencies": {
+    "@types/jasmine": "^4.0.3",
     "@types/node": "^17.0.44",
-    "jasmine": "^4.2.0",
-    "typescript": "^4.7.3"
+    "jasmine": "^4.2.1",
+    "jasmine-spec-reporter": "^7.0.0",
+    "jasmine-ts": "^0.4.0",
+    "ts-loader": "^9.3.1",
+    "ts-node": "^10.9.1",
+    "typescript": "^4.7.3",
+    "webpack": "^5.73.0",
+    "webpack-cli": "^4.10.0",
+    "webpack-dev-server": "^4.9.3"
   },
   "dependencies": {
     "@types/crypto-js": "^4.1.1",

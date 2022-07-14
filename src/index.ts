@@ -3,12 +3,7 @@ const toBuffer = require('it-to-buffer');
 
 /**
  * The IPFS oracle that is used to query challenge blocks and submit proofs to a verifier.
- *
- * It pulls file identifiers and necessary metadata from a list of fileObjects.
- *
  * Once a challenge block is pulled, it is submitted to the verifier along with any sibling hashes.
- *
- * The verifier should have knowledge of the root hashes of each file in the network.
  */
 
 /**
@@ -18,9 +13,6 @@ const toBuffer = require('it-to-buffer');
 export type FileDescription = {
     CID: String,  // The CID of the file
     oboaPath: String, // The tree describing the file
-
-    // TODO: Expand this object as our proofs become more complex
-    // endpoints: ...
 }
 
 /**
@@ -33,7 +25,9 @@ export type FileProof = {
     err: any // An error if one occurred during querying for a file
 }
 
-
+/**
+ * Options for the proof builder
+ */
 export type Options = {
     obaoCallback?: (obaoPath: String) => Promise<any>,
     challengeTimeout?: number
@@ -124,24 +118,3 @@ const getChallengeBlockCID = async (ipfsNode: any, CID: String) => {
     // Return the hash of the block at the deterministic index
     return hashes[index]
 }
-
-/* DEPRECATED */
-
-/**
- * Summary: Prove that a file is available on the network.
- * @param ipfsNode: The IPFS node we want to use to generate the proof.
- * @param CID: The CID of the file we want to check.
- * @param options: our optional arguments
- *  timeout: how long we want to run our checks for before they fail
- * @returns boolean: True if the file is available on the network, false otherwise.
- */
-//  const fileProofDownload = async (
-//     ipfsNode: any,
-//     CID: String,
-//     options: {timeout?: number} = {}
-// ) => {
-//     let proofTimeout = options.timeout || 1000  // ms
-//     const source = await toBuffer(ipfsNode.cat(CID))
-//     const hash = await ipfsNode.add(source, {onlyHash: true, timeout: proofTimeout}).cid.toString()
-//     return hash === CID
-// }

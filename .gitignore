@@ -1,5 +1,6 @@
 node_modules/*
 .idea/*
+dist/
 
 # Ignore Test Files when committing
 spec/testCases/testBaos/*
