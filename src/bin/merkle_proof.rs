@@ -1,8 +1,11 @@
-
+#![allow(dead_code, unused)]
 use rand::prelude::*;
 use std::io::prelude::*;
 use std::io::{Cursor, SeekFrom};
 use std::fs::File;
+
+use crate::bao_creator::create_obao;
+mod bao_creator;
 
 struct FakeSeeker<R: Read> {
     reader: R,
@@ -33,45 +36,66 @@ impl<R: Read> Seek for FakeSeeker<R> {
     }
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // 1 MiB of random bytes
-    let mut whole_input = vec![0u8; 1 << 20];
-    rand::thread_rng().fill(&mut whole_input[..]);
+fn create_slice(obao:Vec<u8>, chunks: &[u8], start_index: usize) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
 
-    // Create an outboard encoding.
-    let mut obao = Vec::new();
-    let mut encoder = bao::encode::Encoder::new_outboard(Cursor::new(&mut obao));
-    encoder.write_all(&whole_input)?;
-    encoder.finalize()?;
-
-    // Use the outboard encoding to extract a slice for the range 2047..2049 the usual way. This
-    // requires the whole input file, but it'll only read the second and third chunks.
-    let mut extractor = bao::encode::SliceExtractor::new_outboard(
-        Cursor::new(&whole_input[..]),
-        Cursor::new(&obao[..]),
-        2047,
-        2,
-    );
-    let mut slice = Vec::new();
-    extractor.read_to_end(&mut slice)?;
-
-    // Now do the same thing, but this time supply only the second and third chunks of input. Note
-    // that we need both those chunks whole, even though the target range of the slice is just a
-    // couple bytes. To make this work, use a wrapper type that implements seeking as a no-op.
-    let two_chunks = &whole_input[1024 * 1..1024 * 3];
     let mut extractor2 = bao::encode::SliceExtractor::new_outboard(
-        FakeSeeker::new(two_chunks),
+        FakeSeeker::new(chunks),
         Cursor::new(&obao[..]),
-        2047,
-        2,
+        start_index.try_into().unwrap(),
+        1024,
     );
     let mut slice2 = Vec::new();
     extractor2.read_to_end(&mut slice2)?;
+    return Ok(slice2);
+}
 
-    // Check that we got exactly the same slice.
-    assert_eq!(slice, slice2);
-    let mut file = File::create("bao_slice.txt").unwrap();
-    write!(file,"{:?}", &slice2);
-
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test] 
+    fn obao_slice_random_input_file() -> Result<(), Box<dyn std::error::Error>> {
+        let mut whole_input = vec![0u8; 1 << 20];
+        rand::thread_rng().fill(&mut whole_input[..]);
+        let (obao, _hash) = create_obao_2(whole_input.clone())?;
+
+        // Use the outboard encoding to extract a slice for the range 2048..3072 the usual way. This
+        // requires the whole input file, but it'll only read the second and third chunks.
+        let start_index = 2048;
+        let mut extractor = bao::encode::SliceExtractor::new_outboard(
+            Cursor::new(&whole_input[..]),
+            Cursor::new(&obao[..]),
+            start_index.try_into().unwrap(),
+            1024,
+        );
+        let mut slice = Vec::new();
+        extractor.read_to_end(&mut slice)?;
+        let chunks = &whole_input[start_index * 1..start_index + 1024];
+        let slice2 = create_slice(obao, chunks, start_index)?;
+        assert_eq!(slice, slice2);
+        Ok(())
+    }   
+    #[test] 
+    fn verify_slice() -> Result<(), Box<dyn std::error::Error>> {
+
+        let mut whole_input = vec![0u8; 1 << 20];
+        rand::thread_rng().fill(&mut whole_input[..]);
+        let (obao, hash) = create_obao_2(whole_input.clone())?;
+
+        let start_index = 2048;
+        let slice_len = 1024;
+        let chunks = &whole_input[start_index..start_index + slice_len];
+        let slice = create_slice(obao, chunks, start_index)?;
+
+        let mut decoded = Vec::new();
+        let mut decoder = bao::decode::SliceDecoder::new(&*slice, &hash, start_index.try_into().unwrap(), slice_len.try_into().unwrap());
+        decoder.read_to_end(&mut decoded)?;
+        assert_eq!(&whole_input[start_index as usize..][..slice_len as usize], &*decoded);
+
+        Ok(())
+    }
 }
