@@ -26,8 +26,5 @@
   },
   "files": [
     "src/index.ts"
-  ],                                                  /* Specify the files to include in the compilation. */
-//  "include": [
-//    "./spec/**/*.ts"
-//  ],                                                  /* Specify the files to include in the compilation. */
+  ]                                                     /* Specify the files to include in the compilation. */
 }
