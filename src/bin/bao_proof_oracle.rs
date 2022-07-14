@@ -1,5 +1,6 @@
 //! This script should be integrated with AWS lambda oracle. It will need to make a call to the IPFS node to get the chunk of the file,
-//! then use that chunk to create a slice (proof). It will then need to send that proof to chain. 
+//! then use that chunk to create a slice (proof). It will then need to send that proof to chain. Blake3 uses 1024 byte chunks, so the 
+//! chunk size should be 1024, representing a single leaf in the Merkle tree.
 
 #![allow(dead_code, unused)]
 use rand::prelude::*;
@@ -7,8 +8,10 @@ use std::io::prelude::*;
 use std::io::{Cursor, SeekFrom};
 use std::fs::File;
 
-use crate::bao_creator::create_obao;
-mod bao_creator;
+use crate::bao_creator_estuary::create_obao;
+mod bao_creator_estuary;
+
+pub(crate) const CHUNK_SIZE: usize = 1024;
 
 struct FakeSeeker<R: Read> {
     reader: R,
@@ -49,7 +52,7 @@ fn create_slice(obao:Vec<u8>, chunks: &[u8], start_index: usize) -> Result<Vec<u
         FakeSeeker::new(chunks),
         Cursor::new(&obao[..]),
         start_index.try_into().unwrap(),
-        1024,
+        CHUNK_SIZE.try_into().unwrap(),
     );
     let mut slice2 = Vec::new();
     extractor2.read_to_end(&mut slice2)?;
@@ -57,6 +60,7 @@ fn create_slice(obao:Vec<u8>, chunks: &[u8], start_index: usize) -> Result<Vec<u
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+
     Ok(())
 }
 
@@ -70,20 +74,21 @@ mod tests {
         rand::thread_rng().fill(&mut whole_input[..]);
         let (obao, _hash) = create_obao(whole_input.clone())?;
 
-        // Use the outboard encoding to extract a slice for the range 2048..3072 the standard way. This
-        // requires the whole input file, but it'll only read the second and third chunks.
-        let start_index = 2048;
+        // Use the outboard encoding to extract a slice for a random range the standard way. This
+        // requires the whole input file, but it'll only read a single chunk. 
+        let range = whole_input.len() / CHUNK_SIZE;
+        let start_index = rand::thread_rng().gen_range(0..range) * CHUNK_SIZE;
         let mut extractor = bao::encode::SliceExtractor::new_outboard(
             Cursor::new(&whole_input[..]),
             Cursor::new(&obao[..]),
             start_index.try_into().unwrap(),
-            1024,
+            CHUNK_SIZE.try_into().unwrap(),
         );
         let mut slice = Vec::new();
         extractor.read_to_end(&mut slice)?;
         
         // Creating a chunk. This will be done in production by integrating a call to ipfsNode.cat(CID, {offset: start, length: size})
-        let chunks = &whole_input[start_index * 1..start_index + 1024];
+        let chunks = &whole_input[start_index * 1..start_index + CHUNK_SIZE];
         let slice2 = create_slice(obao, chunks, start_index)?;
         // The slice created through the Fake Seeker and only a chunk of the file, and the slice created using the whole file are the same. 
         assert_eq!(slice, slice2);
@@ -96,17 +101,18 @@ mod tests {
         rand::thread_rng().fill(&mut whole_input[..]);
         let (obao, hash) = create_obao(whole_input.clone())?;
 
-        let start_index = 2048;
-        let slice_len = 1024;
-        let chunks = &whole_input[start_index..start_index + slice_len];
+        let range = whole_input.len() / CHUNK_SIZE;
+        let start_index = rand::thread_rng().gen_range(0..range) * CHUNK_SIZE;
+        
+        let chunks = &whole_input[start_index..start_index + CHUNK_SIZE];
         let slice = create_slice(obao, chunks, start_index)?;
 
         // Decoding the file on the slice in BAO is the equivalent of running a merkle proof. If the slice is invalid, the decoder will exit
         // with an error.
         let mut decoded = Vec::new();
-        let mut decoder = bao::decode::SliceDecoder::new(&*slice, &hash, start_index.try_into().unwrap(), slice_len.try_into().unwrap());
+        let mut decoder = bao::decode::SliceDecoder::new(&*slice, &hash, start_index.try_into().unwrap(), CHUNK_SIZE.try_into().unwrap());
         decoder.read_to_end(&mut decoded)?;
-        assert_eq!(&whole_input[start_index as usize..][..slice_len as usize], &*decoded);
+        assert_eq!(&whole_input[start_index as usize..][..CHUNK_SIZE as usize], &*decoded);
         Ok(())
     }
 
@@ -117,18 +123,40 @@ mod tests {
         rand::thread_rng().fill(&mut whole_input[..]);
         let (obao, hash) = create_obao(whole_input.clone())?;
 
-        let start_index = 2048;
-        let slice_len = 1024;
-        let chunks = &whole_input[start_index..start_index + slice_len];
+        let range = whole_input.len() / CHUNK_SIZE;
+        let start_index = rand::thread_rng().gen_range(0..range) * CHUNK_SIZE;
+        let chunks = &whole_input[start_index..start_index + CHUNK_SIZE];
         let mut slice = create_slice(obao, chunks, start_index)?;
 
         // Change the last byte of the slice so the decoder has an error
         let last_index = slice.len() - 1;
         slice[last_index] ^= 1;
-        let mut decoder = bao::decode::SliceDecoder::new(&*slice, &hash, start_index.try_into().unwrap(), slice_len.try_into().unwrap());
+        let mut decoder = bao::decode::SliceDecoder::new(&*slice, &hash, start_index.try_into().unwrap(), CHUNK_SIZE.try_into().unwrap());
         let err = decoder.read_to_end(&mut Vec::new()).unwrap_err();
         assert_eq!(std::io::ErrorKind::InvalidData, err.kind());
 
         Ok(())
     }
+    
+    #[test]
+    fn verification_local_input_file() -> Result<(), Box<dyn std::error::Error>> {
+
+        let mut f = File::open("ethereum.pdf")?;
+        let mut whole_input = Vec::new();
+        f.read_to_end(&mut whole_input)?;
+
+        let (obao, hash) = create_obao(whole_input.clone())?;
+
+        let range = whole_input.len() / CHUNK_SIZE;
+        let start_index = rand::thread_rng().gen_range(0..range) * CHUNK_SIZE;
+        
+        let chunks = &whole_input[start_index..start_index + CHUNK_SIZE];
+        let slice = create_slice(obao, chunks, start_index)?;
+
+        let mut decoded = Vec::new();
+        let mut decoder = bao::decode::SliceDecoder::new(&*slice, &hash, start_index.try_into().unwrap(), CHUNK_SIZE.try_into().unwrap());
+        decoder.read_to_end(&mut decoded)?;
+        assert_eq!(&whole_input[start_index as usize..][..CHUNK_SIZE as usize], &*decoded);
+        Ok(())
+    }   
 }
