@@ -1,8 +1,8 @@
 {
   "name": "ipfs-proof-builder",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "An IPFS query client for reporting merkle proofs to a verifier",
-  "main": "dsit/index.js",
+  "main": "dist/index.js",
   "types": "src/index.d.ts",
   "scripts": {
     "prepublish": "npm run build",
