@@ -11,7 +11,6 @@ const SHA256 = require('crypto-js/sha256');
  */
 export type FileDescription = {
     CID: String,  // The CID of the file
-    oboaPath: String, // The tree describing the file
 }
 
 /**
@@ -28,7 +27,7 @@ export type FileProof = {
  * Options for the proof builder
  */
 export type Options = {
-    obaoCallback?: (obaoPath: String) => Promise<any>,
+    obaoCallback?: (CID: String) => Promise<any>,
     challengeTimeout?: number
 }
 
@@ -69,7 +68,7 @@ export const buildProof = async (
     // Build a proof for the challenge block
     if (options.obaoCallback) {
         // Read in the obao file using the specified callback
-        let obaoFile: any = await options.obaoCallback(file.oboaPath)
+        let obaoFile: any = await options.obaoCallback(file.CID)
         // Build the proof for the challenge block
         result.proof = await getFileProofHashes(result.challenge, obaoFile)
     } else {

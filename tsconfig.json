@@ -9,7 +9,7 @@
 
     /* Modules */
     "module": "commonjs",                                /* Specify what module code is generated. */
-    "outDir": "./dist",                        /* Specify the output file name. */
+    "outDir": "./dist",                                  /* Specify the output file name. */
 
     /* JavaScript Support */
     "allowJs": true,                                    /* Allow JavaScript files to be a part of your program. Use the 'checkJS' option to get errors from these files. */
