@@ -1,3 +1,6 @@
+<h1>DEPRECATED</h1>
+functionality for building and verifying Merkle proofs has moved to `blake3-processing`
+
 <h1>Welcome to ipfs-proof-oracle 👋</h1>
 <p>
   <img alt="Version" src="https://img.shields.io/badge/version-(0.0.1)-blue.svg?cacheSeconds=2592000" />
