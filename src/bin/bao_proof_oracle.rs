@@ -6,8 +6,9 @@
 use anyhow::Result;
 use rand::prelude::*;
 use std::fs::File;
+use std::fs;
 use std::io::prelude::*;
-use std::io::{Cursor, SeekFrom};
+use std::io::{Cursor, SeekFrom, Write};
 
 use crate::bao_creator_estuary::create_obao;
 mod bao_creator_estuary;
@@ -60,7 +61,23 @@ fn create_slice(obao: Vec<u8>, chunks: &[u8], start_index: usize) -> Result<Vec<
 }
 
 fn main() -> Result<()> {
-    unimplemented!();
+
+    let file_name = "ethereum.pdf";
+    let mut file_content = Vec::new();
+    let mut file = File::open(&file_name).expect("Unable to open file");
+    file.read_to_end(&mut file_content).expect("Unable to read");
+    
+    let (obao, _hash) = create_obao(file_content.clone())?;
+    let range = file_content.len() / CHUNK_SIZE;
+    let start_index = rand::thread_rng().gen_range(0..range) * CHUNK_SIZE;
+
+    // Creating a chunk. This will be done in production by integrating a call to ipfsNode.cat(CID, {offset: start, length: size})
+    let chunks = &file_content[start_index * 1..start_index + CHUNK_SIZE];
+    let slice2 = create_slice(obao, chunks, start_index)?;
+
+    let mut file = File::create("bao_slice.txt").unwrap();
+    write!(file,"{:?}", &slice2);
+    Ok(())
 }
 
 #[cfg(test)]
