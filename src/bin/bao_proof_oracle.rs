@@ -67,16 +67,22 @@ fn main() -> Result<()> {
     let mut file = File::open(&file_name).expect("Unable to open file");
     file.read_to_end(&mut file_content).expect("Unable to read");
     
-    let (obao, _hash) = create_obao(file_content.clone())?;
+    let (obao, hash) = create_obao(file_content.clone())?;
     let range = file_content.len() / CHUNK_SIZE;
-    let start_index = rand::thread_rng().gen_range(0..range) * CHUNK_SIZE;
+    let start_index = 532480;// rand::thread_rng().gen_range(0..range) * CHUNK_SIZE;
 
     // Creating a chunk. This will be done in production by integrating a call to ipfsNode.cat(CID, {offset: start, length: size})
     let chunks = &file_content[start_index * 1..start_index + CHUNK_SIZE];
     let slice2 = create_slice(obao, chunks, start_index)?;
-
-    let mut file = File::create("bao_slice.txt").unwrap();
-    write!(file,"{:?}", &slice2);
+    std::fs::write("bao_slice_2.txt", slice2.clone()).unwrap();
+    let mut decoded = Vec::new();
+        let mut decoder = bao::decode::SliceDecoder::new(
+            &*slice2,
+            &hash,
+            start_index.try_into().unwrap(),
+            CHUNK_SIZE.try_into().unwrap(),
+        );
+        decoder.read_to_end(&mut decoded)?;
     Ok(())
 }
 
@@ -122,6 +128,7 @@ mod tests {
         let chunks = &whole_input[start_index..start_index + CHUNK_SIZE];
         let slice = create_slice(obao, chunks, start_index)?;
 
+        println!("DATA: {:?}", slice);
         // Decoding the file on the slice in BAO is the equivalent of running a merkle proof. If the slice is invalid, the decoder will exit
         // with an error.
         let mut decoded = Vec::new();
